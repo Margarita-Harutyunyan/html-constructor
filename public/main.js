@@ -3,7 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const result = document.getElementById('result');
 
     createButton.addEventListener('click', createElement);
-    result.addEventListener('click', moveElement);
+    result.addEventListener('dragover', allowDrop);
+    result.addEventListener('drop', drop);
 
 });
 
@@ -28,6 +29,11 @@ function createElement() {
     if (!element) {
         throw new Error(`Failed to create ${selectedOption} element`)
     }
+    
+    element.id = 'elem_' + Date.now();
+    element.draggable = true;
+    element.addEventListener('dragstart', drag);
+
     constructor.appendChild(element);
 }
 
@@ -35,77 +41,83 @@ function createDiv() {
     const div = document.createElement('div');
     div.classList.add('div-element');
 
-    div.addEventListener('click', moveElement);
-
-    div.innerHTML = `
-        <p>DIV</p>
-    `;
+    div.addEventListener('dragover', allowDrop);
+    div.addEventListener('drop', drop);
+    div.innerText = 'DIV';
 
     return div;
 }
 
 function createH1() {
-    const div = document.createElement('div');
-    div.classList.add('h1-element');
+    const h1 = document.createElement('h1');
+    h1.classList.add('h1-element');
+
+    const inputContainer = document.createElement('div');
+    inputContainer.classList.add('input-container');
+
+    const selectorContainer = document.getElementById('selector-container');
+    selectorContainer.appendChild(inputContainer);
 
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Enter heading...';
 
-    const selectorContainer = document.getElementById('selector-container');
-    selectorContainer.appendChild(input);
+    const inputButton = document.createElement('button');
+    inputButton.innerText = 'Add';
+
+    inputContainer.appendChild(input);
+    inputContainer.appendChild(inputButton);
+
     input.focus();
+
+    inputButton.addEventListener('click', () => {
+        const inputText = input.value.trim();
+        selectorContainer.removeChild(inputContainer);
+        h1.textContent = inputText;
+    });
 
     input.addEventListener('keypress', function (event) {
         if (event.key === 'Enter') {
             const inputText = input.value.trim();
-
-            if (inputText) {
-                selectorContainer.removeChild(input);
-                div.innerHTML = `
-                <p>H1</p>
-                <h1>${inputText}</h1>
-            `;
-            div.addEventListener('click', moveElement);
-            }
+            selectorContainer.removeChild(inputContainer);
+            h1.textContent = inputText;
         }
     });
 
-    return div;
+    return h1;
 }
 
 function createInput() {
-    const div = document.createElement('div');
-    div.classList.add('input-element');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Input Tag';
 
-    div.addEventListener('click', moveElement);
+    input.classList.add('input-element');
 
-    div.innerHTML = `
-        <p>Input Tag</p>
-    `;
-
-    return div;
+    return input;
 }
 
-let selectedElement = null;
+function drag(event) {
+    event.dataTransfer.setData('text', event.target.id);
+    event.target.classList.add('draggable');
+}
 
-function moveElement(event) {
-    if (event.target.parentElement.id === 'constructor') {
-        selectedElement = event.target;
-        selectedElement.classList.add('selected');
-    }
+function allowDrop(event) {
+    event.preventDefault();
+}
 
-    else if (selectedElement) {
-        const result = document.getElementById('result');
+function drop(event) {
+    event.preventDefault();
 
-        if (event.target === result || event.target.classList.contains('div-element')) {
-            selectedElement.classList.remove('selected');
+    const selectedElement = document.querySelector('.draggable');
+
+    if (selectedElement) {
+        if (event.target.id === 'result' || event.target.classList.contains('div-element')) {
             event.target.appendChild(selectedElement);
-            selectedElement = null;
         } else {
             event.stopPropagation();
             alert(`You cannot move an element into ${event.target.classList}`);
-            selectedElement.classList.remove('selected');
         }
+        selectedElement.classList.remove('draggable');
     }
 }
